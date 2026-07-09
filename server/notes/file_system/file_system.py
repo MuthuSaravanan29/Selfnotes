@@ -2,9 +2,10 @@ import glob
 import os
 import re
 import shutil
+import subprocess
 import time
 from datetime import datetime
-from typing import List, Literal, Set, Tuple
+from typing import List, Literal, Optional, Set, Tuple
 
 import whoosh
 from whoosh import writing
@@ -56,10 +57,55 @@ class FileSystemNotes(BaseNotes):
         self.index = self._load_index()
         self._sync_index_with_retry(optimize=True)
 
+    @staticmethod
+    def _find_git_root(path: str) -> Optional[str]:
+        """Find the git repository root by searching upwards from path."""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=path,
+                capture_output=True,
+                timeout=5,
+                text=True,
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+        return None
+
+    def _git_sync(self, action: str, title: str) -> None:
+        """Auto-commit note changes to git."""
+        repo_path = self._find_git_root(self.storage_path)
+        if not repo_path:
+            return
+        try:
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=repo_path,
+                capture_output=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "commit", "-m", f"notes: {action} '{title}'", "--allow-empty"],
+                cwd=repo_path,
+                capture_output=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "push"],
+                cwd=repo_path,
+                capture_output=True,
+                timeout=30,
+            )
+        except Exception as e:
+            logger.warning(f"Git sync failed: {e}")
+
     def create(self, data: NoteCreate) -> Note:
         """Create a new note."""
         filepath = self._path_from_title(data.title)
         self._write_file(filepath, data.content)
+        self._git_sync("created", data.title)
         return Note(
             title=data.title,
             content=data.content,
@@ -81,6 +127,7 @@ class FileSystemNotes(BaseNotes):
         """Update a specific note."""
         is_valid_filename(title)
         filepath = self._path_from_title(title)
+        old_title = title
         if data.new_title is not None:
             new_filepath = self._path_from_title(data.new_title)
             if filepath != new_filepath and os.path.isfile(new_filepath):
@@ -95,6 +142,7 @@ class FileSystemNotes(BaseNotes):
             content = data.new_content
         else:
             content = self._read_file(filepath)
+        self._git_sync("updated", f"{old_title} -> {title}" if old_title != title else title)
         return Note(
             title=title,
             content=content,
@@ -106,6 +154,7 @@ class FileSystemNotes(BaseNotes):
         is_valid_filename(title)
         filepath = self._path_from_title(title)
         os.remove(filepath)
+        self._git_sync("deleted", title)
 
     def search(
         self,
