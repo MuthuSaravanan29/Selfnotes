@@ -14,15 +14,24 @@ const props = defineProps({
 });
 
 const viewerElement = ref();
+let viewer;
 
 onMounted(() => {
-  new Viewer({
+  viewer = new Viewer({
     ...baseOptions,
     extendedAutolinks,
     el: viewerElement.value,
     initialValue: props.initialValue,
   });
 });
+
+function setMarkdown(markdown) {
+  if (viewer) {
+    viewer.setMarkdown(markdown);
+  }
+}
+
+defineExpose({ setMarkdown });
 </script>
 
 <style>
