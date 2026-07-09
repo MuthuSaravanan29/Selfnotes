@@ -127,6 +127,8 @@ class FileSystemNotes(BaseNotes):
         """Update a specific note."""
         is_valid_filename(title)
         filepath = self._path_from_title(title)
+        if not os.path.isfile(filepath):
+            raise FileNotFoundError(f"Note '{title}' not found.")
         old_title = title
         if data.new_title is not None:
             new_filepath = self._path_from_title(data.new_title)

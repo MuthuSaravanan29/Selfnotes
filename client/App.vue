@@ -96,7 +96,7 @@ import SvgIcon from "@jamescoyle/vue-icon";
 import Mousetrap from "mousetrap";
 import "mousetrap/plugins/global-bind/mousetrap-global-bind";
 import { useToast } from "primevue/usetoast";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { RouterView, useRoute } from "vue-router";
 
 import { apiErrorHandler, getConfig } from "./api.js";
@@ -117,6 +117,7 @@ const globalStore = useGlobalStore();
 const isSearchModalVisible = ref(false);
 const isCommandPaletteVisible = ref(false);
 const isNotesSyncVisible = ref(false);
+const configLoaded = ref(false);
 const loadingIndicator = ref();
 const route = useRoute();
 const toast = useToast();
@@ -168,12 +169,22 @@ Mousetrap.bindGlobal("ctrl+k", () => {
 getConfig()
   .then((data) => {
     globalStore.config = data;
-    loadingIndicator.value.setLoaded();
+    configLoaded.value = true;
   })
   .catch((error) => {
     apiErrorHandler(error, toast);
-    loadingIndicator.value.setFailed();
+    configLoaded.value = true;
   });
+
+// Sync the active LoadingIndicator whenever route changes (handles v-if/v-else
+// destroying and recreating the component)
+watch(() => route.name, () => {
+  if (configLoaded.value) {
+    nextTick(() => {
+      loadingIndicator.value?.setLoaded();
+    });
+  }
+});
 
 function toggleSearchModal() {
   isSearchModalVisible.value = !isSearchModalVisible.value;
