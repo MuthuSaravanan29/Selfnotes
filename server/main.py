@@ -1,8 +1,12 @@
-from typing import List, Literal
+import json
+import os
+import subprocess
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 import api_messages
 from attachments.base import BaseAttachments
@@ -10,7 +14,7 @@ from attachments.models import AttachmentCreateResponse
 from auth.base import BaseAuth
 from auth.models import Login, Token
 from global_config import AuthType, GlobalConfig, GlobalConfigResponseModel
-from helpers import replace_base_href
+from helpers import get_env, replace_base_href
 from notes.base import BaseNotes
 from notes.models import Note, NoteCreate, NoteUpdate, SearchResult
 
@@ -201,6 +205,150 @@ def get_config():
         quick_access_sort=global_config.quick_access_sort,
         quick_access_limit=global_config.quick_access_limit,
     )
+
+
+# endregion
+
+
+# region Git Sync
+
+class GitConfigModel(BaseModel):
+    remote_url: str = ""
+    auth_type: str = "token"
+    token: str = ""
+
+
+def _get_storage_path() -> str:
+    return get_env("FLATNOTES_PATH", default="/data")
+
+
+def _get_git_config_path() -> str:
+    return os.path.join(_get_storage_path(), ".flatnotes", "git-config.json")
+
+
+def _load_git_config() -> dict:
+    config_path = _get_git_config_path()
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"remote_url": "", "auth_type": "token", "token": ""}
+
+
+def _save_git_config(config: dict) -> None:
+    config_path = _get_git_config_path()
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    with open(config_path, "w") as f:
+        json.dump(config, f)
+
+
+@router.get("/api/git-config", dependencies=auth_deps)
+def get_git_config():
+    """Get the current git sync configuration."""
+    config = _load_git_config()
+    return {"remote_url": config.get("remote_url", ""), "auth_type": config.get("auth_type", "token")}
+
+
+@router.post("/api/git-config", dependencies=auth_deps)
+def set_git_config(data: GitConfigModel):
+    """Set the git sync configuration."""
+    config = _load_git_config()
+    config["remote_url"] = data.remote_url
+    config["auth_type"] = data.auth_type
+    if data.token:
+        config["token"] = data.token
+    _save_git_config(config)
+    return {"status": "ok"}
+
+
+@router.post("/api/git-verify", dependencies=auth_deps)
+def verify_git_sync():
+    """Verify git sync by creating a test file, committing, and pushing."""
+    config = _load_git_config()
+    remote_url = config.get("remote_url", "")
+    auth_type = config.get("auth_type", "token")
+    token = config.get("token", "")
+
+    if not remote_url:
+        raise HTTPException(status_code=400, detail="No remote URL configured")
+
+    storage_path = _get_storage_path()
+    repo_root = _find_git_root(storage_path)
+
+    if not repo_root:
+        raise HTTPException(status_code=400, detail="Not a git repository")
+
+    try:
+        # Set remote URL with auth
+        if auth_type == "token" and token:
+            authed_url = remote_url.replace("https://", f"https://{token}@")
+            subprocess.run(
+                ["git", "remote", "set-url", "origin", authed_url],
+                cwd=repo_root, capture_output=True, timeout=10,
+            )
+        else:
+            subprocess.run(
+                ["git", "remote", "set-url", "origin", remote_url],
+                cwd=repo_root, capture_output=True, timeout=10,
+            )
+
+        # Create a test file
+        test_file = os.path.join(storage_path, ".slingshot-sync-test.md")
+        with open(test_file, "w") as f:
+            f.write(f"# Slingshot Sync Test\n\nVerified at: {__import__('datetime').datetime.now()}\n")
+
+        subprocess.run(["git", "add", "-A"], cwd=repo_root, capture_output=True, timeout=10)
+        result = subprocess.run(
+            ["git", "commit", "-m", "slingshot: verify sync", "--allow-empty"],
+            cwd=repo_root, capture_output=True, timeout=10, text=True,
+        )
+        push = subprocess.run(
+            ["git", "push", "origin", "HEAD"],
+            cwd=repo_root, capture_output=True, timeout=30, text=True,
+        )
+
+        # Clean up test file
+        if os.path.exists(test_file):
+            os.remove(test_file)
+            subprocess.run(["git", "add", "-A"], cwd=repo_root, capture_output=True, timeout=5)
+            subprocess.run(
+                ["git", "commit", "-m", "slingshot: cleanup sync test", "--allow-empty"],
+                cwd=repo_root, capture_output=True, timeout=5,
+            )
+            subprocess.run(["git", "push", "origin", "HEAD"], cwd=repo_root, capture_output=True, timeout=30)
+
+        # Reset remote URL to clean version
+        subprocess.run(
+            ["git", "remote", "set-url", "origin", remote_url],
+            cwd=repo_root, capture_output=True, timeout=5,
+        )
+
+        if push.returncode == 0:
+            return {"status": "success", "message": "Sync verified successfully!"}
+        else:
+            error_msg = push.stderr or "Unknown error"
+            return {"status": "error", "message": error_msg}
+
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Operation timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _find_git_root(path: str) -> Optional[str]:
+    """Find the git repository root by searching upwards."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=path, capture_output=True, timeout=5, text=True,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
 
 
 # endregion

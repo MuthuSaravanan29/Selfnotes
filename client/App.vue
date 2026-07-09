@@ -2,7 +2,8 @@
   <div class="flex h-screen flex-col">
     <PrimeToast />
     <SearchModal v-model="isSearchModalVisible" />
-    <CommandPalette :visible="isCommandPaletteVisible" @close="isCommandPaletteVisible = false" />
+    <CommandPalette :visible="isCommandPaletteVisible" @close="isCommandPaletteVisible = false" @open-sync="isNotesSyncVisible = true" />
+    <NotesSync :visible="isNotesSyncVisible" @close="isNotesSyncVisible = false" />
 
     <template v-if="route.name === 'login'">
       <LoadingIndicator ref="loadingIndicator" class="container mx-auto flex h-screen flex-col px-2 py-4">
@@ -22,7 +23,7 @@
             <SvgIcon type="mdi" :path="mdiMenu" size="1.25em" />
           </button>
           <RouterLink :to="{ name: 'home' }" class="text-sm font-semibold text-theme-text hover:text-theme-brand">
-            Selfnotes
+            Slingshot
           </RouterLink>
         </div>
 
@@ -50,6 +51,13 @@
             title="Daily Note"
           >
             <SvgIcon type="mdi" :path="mdiCalendarToday" size="1.25em" />
+          </button>
+          <button
+            class="rounded px-2 py-1 text-sm text-theme-text-muted hover:bg-theme-background-elevated"
+            @click="isNotesSyncVisible = true"
+            title="Notes Sync"
+          >
+            <SvgIcon type="mdi" :path="mdiSync" size="1.25em" />
           </button>
           <button
             class="rounded px-2 py-1 text-sm text-theme-text-muted hover:bg-theme-background-elevated"
@@ -83,7 +91,7 @@
 </template>
 
 <script setup>
-import { mdiCalendarToday, mdiLogout, mdiMagnify, mdiMenu, mdiPlus, mdiThemeLightDark } from "@mdi/js";
+import { mdiCalendarToday, mdiLogout, mdiMagnify, mdiMenu, mdiPlus, mdiSync, mdiThemeLightDark } from "@mdi/js";
 import SvgIcon from "@jamescoyle/vue-icon";
 import Mousetrap from "mousetrap";
 import "mousetrap/plugins/global-bind/mousetrap-global-bind";
@@ -94,6 +102,7 @@ import { RouterView, useRoute } from "vue-router";
 import { apiErrorHandler, getConfig } from "./api.js";
 import CommandPalette from "./components/CommandPalette.vue";
 import FileExplorer from "./components/FileExplorer.vue";
+import NotesSync from "./components/NotesSync.vue";
 import PrimeToast from "./components/PrimeToast.vue";
 import { authTypes } from "./constants.js";
 import { useGlobalStore } from "./globalStore.js";
@@ -107,6 +116,7 @@ import router from "./router.js";
 const globalStore = useGlobalStore();
 const isSearchModalVisible = ref(false);
 const isCommandPaletteVisible = ref(false);
+const isNotesSyncVisible = ref(false);
 const loadingIndicator = ref();
 const route = useRoute();
 const toast = useToast();

@@ -149,6 +149,37 @@ export async function getBacklinks(title) {
   }
 }
 
+export async function getGitConfig() {
+  try {
+    const response = await api.get("api/git-config");
+    return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
+export async function setGitConfig(remoteUrl, authType, token) {
+  try {
+    const response = await api.post("api/git-config", {
+      remote_url: remoteUrl,
+      auth_type: authType,
+      token: token || "",
+    });
+    return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
+export async function verifyGitSync() {
+  try {
+    const response = await api.post("api/git-verify");
+    return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
 export async function createAttachment(file) {
   try {
     const formData = new FormData();

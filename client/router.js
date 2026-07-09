@@ -63,7 +63,7 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
-  let title = "Selfnotes";
+  let title = "Slingshot";
   if (to.name === "note") {
     if (to.params.title) {
       title = `${to.params.title} - ${title}`;

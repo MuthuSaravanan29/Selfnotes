@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { mdiCalendarToday, mdiFileDocumentOutline, mdiMagnify } from "@mdi/js";
+import { mdiCalendarToday, mdiFileDocumentOutline, mdiMagnify, mdiSync } from "@mdi/js";
 import {
   mdilHome,
   mdilLogout,
@@ -92,7 +92,7 @@ import { clearStoredToken } from "../tokenStorage.js";
 import { openDailyNote } from "../dailyNote.js";
 
 const props = defineProps({ visible: Boolean });
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "openSync"]);
 
 const router = useRouter();
 const globalStore = useGlobalStore();
@@ -108,6 +108,7 @@ const commands = computed(() => [
   { label: "Go to Home", icon: mdilHome, shortcut: "Ctrl+Alt+H", action: () => router.push({ name: "home" }) },
   { label: "Toggle Sidebar", icon: mdiFileDocumentOutline, shortcut: "Ctrl+\\", action: () => globalStore.toggleSidebar() },
   { label: "Toggle Theme", icon: mdilMonitor, action: toggleTheme },
+  { label: "Notes Sync", icon: mdiSync, action: () => emit("openSync") },
   ...(globalStore.config.authType && ![authTypes.none, authTypes.readOnly].includes(globalStore.config.authType)
     ? [{ label: "Log Out", icon: mdilLogout, action: () => { clearStoredToken(); localStorage.clear(); router.push({ name: "login" }); } }]
     : []),
