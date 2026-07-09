@@ -126,6 +126,7 @@
         :initialValue="note.content"
         class="toast-viewer pb-4"
       />
+      <BacklinksPanel :title="note.title" />
     </div>
   </LoadingIndicator>
 </template>
@@ -164,6 +165,7 @@ import LoadingIndicator from "../components/LoadingIndicator.vue";
 import Toggle from "../components/Toggle.vue";
 import ToastEditor from "../components/toastui/ToastEditor.vue";
 import ToastViewer from "../components/toastui/ToastViewer.vue";
+import BacklinksPanel from "../components/BacklinksPanel.vue";
 import { authTypes } from "../constants.js";
 import { useGlobalStore } from "../globalStore.js";
 import { getToastOptions } from "../helpers.js";

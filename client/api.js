@@ -140,6 +140,15 @@ export async function getTags() {
   }
 }
 
+export async function getBacklinks(title) {
+  try {
+    const response = await api.get(`api/backlinks/${encodeURIComponent(title)}`);
+    return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
 export async function createAttachment(file) {
   try {
     const formData = new FormData();

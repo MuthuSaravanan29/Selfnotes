@@ -2,6 +2,7 @@
   <div class="flex h-screen flex-col">
     <PrimeToast />
     <SearchModal v-model="isSearchModalVisible" />
+    <CommandPalette :visible="isCommandPaletteVisible" @close="isCommandPaletteVisible = false" />
 
     <template v-if="route.name === 'login'">
       <LoadingIndicator ref="loadingIndicator" class="container mx-auto flex h-screen flex-col px-2 py-4">
@@ -45,6 +46,13 @@
           </RouterLink>
           <button
             class="rounded px-2 py-1 text-sm text-theme-text-muted hover:bg-theme-background-elevated"
+            @click="openDailyNote"
+            title="Daily Note"
+          >
+            <SvgIcon type="mdi" :path="mdiCalendarToday" size="1.25em" />
+          </button>
+          <button
+            class="rounded px-2 py-1 text-sm text-theme-text-muted hover:bg-theme-background-elevated"
             @click="toggleTheme"
             title="Toggle theme"
           >
@@ -75,7 +83,7 @@
 </template>
 
 <script setup>
-import { mdiLogout, mdiMagnify, mdiMenu, mdiPlus, mdiThemeLightDark } from "@mdi/js";
+import { mdiCalendarToday, mdiLogout, mdiMagnify, mdiMenu, mdiPlus, mdiThemeLightDark } from "@mdi/js";
 import SvgIcon from "@jamescoyle/vue-icon";
 import Mousetrap from "mousetrap";
 import "mousetrap/plugins/global-bind/mousetrap-global-bind";
@@ -84,18 +92,21 @@ import { computed, ref } from "vue";
 import { RouterView, useRoute } from "vue-router";
 
 import { apiErrorHandler, getConfig } from "./api.js";
+import CommandPalette from "./components/CommandPalette.vue";
 import FileExplorer from "./components/FileExplorer.vue";
 import PrimeToast from "./components/PrimeToast.vue";
 import { authTypes } from "./constants.js";
 import { useGlobalStore } from "./globalStore.js";
 import { loadTheme, toggleTheme } from "./helpers.js";
 import { clearStoredToken } from "./tokenStorage.js";
+import { openDailyNote } from "./dailyNote.js";
 import SearchModal from "./partials/SearchModal.vue";
 import LoadingIndicator from "./components/LoadingIndicator.vue";
 import router from "./router.js";
 
 const globalStore = useGlobalStore();
 const isSearchModalVisible = ref(false);
+const isCommandPaletteVisible = ref(false);
 const loadingIndicator = ref();
 const route = useRoute();
 const toast = useToast();
@@ -127,6 +138,19 @@ Mousetrap.bindGlobal("ctrl+alt+h", () => {
 Mousetrap.bindGlobal("ctrl+\\", () => {
   if (route.name !== "login") {
     globalStore.toggleSidebar();
+    return false;
+  }
+});
+
+Mousetrap.bindGlobal("ctrl+p", () => {
+  if (route.name !== "login") {
+    isCommandPaletteVisible.value = !isCommandPaletteVisible.value;
+    return false;
+  }
+});
+Mousetrap.bindGlobal("ctrl+k", () => {
+  if (route.name !== "login") {
+    isCommandPaletteVisible.value = !isCommandPaletteVisible.value;
     return false;
   }
 });

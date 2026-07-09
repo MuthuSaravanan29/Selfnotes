@@ -40,3 +40,7 @@ class BaseNotes(ABC):
     def get_tags(self) -> list[str]:
         """Get a list of all indexed tags."""
         pass
+
+    def get_backlinks(self, title: str) -> list[str]:
+        """Get a list of note titles that link to the given title."""
+        return []

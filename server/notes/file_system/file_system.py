@@ -208,6 +208,22 @@ class FileSystemNotes(BaseNotes):
             tags = reader.field_terms("tags")
             return [tag for tag in tags]
 
+    def get_backlinks(self, title: str) -> list[str]:
+        """Return a list of note titles that link to the given title."""
+        backlinks = []
+        pattern = re.compile(
+            r"\[\[\s*" + re.escape(title.strip()) + r"\s*\]\]", re.IGNORECASE
+        )
+        for filepath in glob.glob(os.path.join(self.storage_path, "*" + MARKDOWN_EXT)):
+            try:
+                with open(filepath, "r") as f:
+                    content = f.read()
+                if pattern.search(content):
+                    backlinks.append(self._strip_ext(os.path.basename(filepath)))
+            except Exception:
+                continue
+        return backlinks
+
     @property
     def _index_path(self):
         return os.path.join(self.storage_path, ".flatnotes")

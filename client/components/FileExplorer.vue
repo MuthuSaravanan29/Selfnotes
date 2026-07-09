@@ -44,23 +44,57 @@
         <span class="truncate">{{ note.title }}</span>
       </div>
     </div>
+
+    <!-- Tags Section -->
+    <div v-if="tags.length > 0" class="border-t border-theme-border">
+      <button
+        class="flex w-full items-center px-3 py-2 text-xs font-semibold uppercase text-theme-text-very-muted hover:bg-theme-background-elevated"
+        @click="tagsExpanded = !tagsExpanded"
+      >
+        <SvgIcon
+          type="mdi"
+          :path="tagsExpanded ? mdiChevronDown : mdiChevronRight"
+          size="1em"
+          class="mr-1"
+        />
+        TAGS ({{ tags.length }})
+      </button>
+      <div v-if="tagsExpanded" class="max-h-48 overflow-y-auto px-2 pb-2">
+        <div
+          v-for="tag in tags"
+          :key="tag"
+          class="group flex cursor-pointer items-center rounded px-2 py-1 text-sm text-theme-text-muted hover:bg-theme-background-elevated hover:text-theme-text"
+          @click="searchTag(tag)"
+        >
+          <SvgIcon
+            type="mdi"
+            :path="mdiTagOutline"
+            size="1em"
+            class="mr-2 shrink-0 text-theme-text-very-muted"
+          />
+          <span class="truncate">#{{ tag }}</span>
+        </div>
+      </div>
+    </div>
   </aside>
 </template>
 
 <script setup>
-import { mdiChevronLeft, mdiFileDocumentOutline } from "@mdi/js";
+import { mdiChevronDown, mdiChevronLeft, mdiChevronRight, mdiFileDocumentOutline, mdiTagOutline } from "@mdi/js";
 import SvgIcon from "@jamescoyle/vue-icon";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
-import { getNotes } from "../api.js";
+import { getNotes, getTags } from "../api.js";
+import { params, searchSortOptions } from "../constants.js";
 import { useGlobalStore } from "../globalStore.js";
-import { searchSortOptions } from "../constants.js";
 
 const router = useRouter();
 const route = useRoute();
 const globalStore = useGlobalStore();
 const filterText = ref("");
+const tags = ref([]);
+const tagsExpanded = ref(false);
 
 const visible = computed(() => globalStore.sidebarVisible);
 
@@ -80,6 +114,13 @@ function openNote(title) {
   router.push({ name: "note", params: { title } });
 }
 
+function searchTag(tag) {
+  router.push({
+    name: "search",
+    query: { [params.searchTerm]: `#${tag}`, [params.sortBy]: String(searchSortOptions.title) },
+  });
+}
+
 function toggleSidebar() {
   globalStore.toggleSidebar();
 }
@@ -93,6 +134,20 @@ async function fetchNotes() {
   }
 }
 
-watch(() => route.fullPath, fetchNotes);
-onMounted(fetchNotes);
+async function fetchTags() {
+  try {
+    tags.value = await getTags();
+  } catch (error) {
+    console.error("Failed to fetch tags:", error);
+  }
+}
+
+watch(() => route.fullPath, () => {
+  fetchNotes();
+  fetchTags();
+});
+onMounted(() => {
+  fetchNotes();
+  fetchTags();
+});
 </script>

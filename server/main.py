@@ -176,6 +176,16 @@ def get_tags():
     return note_storage.get_tags()
 
 
+@router.get(
+    "/api/backlinks/{title}",
+    dependencies=auth_deps,
+    response_model=List[str],
+)
+def get_backlinks(title: str):
+    """Get a list of note titles that link to the given title."""
+    return note_storage.get_backlinks(title)
+
+
 # endregion
 
 
