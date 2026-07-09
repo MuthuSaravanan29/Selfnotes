@@ -1,8 +1,8 @@
 {
-  "name": "flatnotes",
-  "version": "5.5.4",
+  "name": "slingshot",
+  "version": "1.0.0",
   "type": "module",
-  "description": "A database-less note taking web app that utilises a flat folder of markdown files for storage.",
+  "description": "Slingshot - An Obsidian-like note taking app with git sync.",
   "main": "client/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
