@@ -19,6 +19,7 @@ from whoosh.query import Every
 from whoosh.searching import Hit
 from whoosh.support.charset import accent_map
 
+from git_sync import find_git_root, get_git_ssh_env
 from helpers import get_env, is_valid_filename
 from logger import logger
 
@@ -57,46 +58,24 @@ class FileSystemNotes(BaseNotes):
         self.index = self._load_index()
         self._sync_index_with_retry(optimize=True)
 
-    @staticmethod
-    def _find_git_root(path: str) -> Optional[str]:
-        """Find the git repository root by searching upwards from path."""
-        try:
-            result = subprocess.run(
-                ["git", "rev-parse", "--show-toplevel"],
-                cwd=path,
-                capture_output=True,
-                timeout=5,
-                text=True,
-            )
-            if result.returncode == 0:
-                return result.stdout.strip()
-        except Exception:
-            pass
-        return None
-
     def _git_sync(self, action: str, title: str) -> None:
         """Auto-commit note changes to git."""
-        repo_path = self._find_git_root(self.storage_path)
+        repo_path = find_git_root(self.storage_path)
         if not repo_path:
             return
         try:
+            git_env = get_git_ssh_env(self.storage_path)
             subprocess.run(
                 ["git", "add", "-A"],
-                cwd=repo_path,
-                capture_output=True,
-                timeout=10,
+                cwd=repo_path, capture_output=True, timeout=10, env=git_env,
             )
             subprocess.run(
                 ["git", "commit", "-m", f"notes: {action} '{title}'", "--allow-empty"],
-                cwd=repo_path,
-                capture_output=True,
-                timeout=10,
+                cwd=repo_path, capture_output=True, timeout=10, env=git_env,
             )
             subprocess.run(
                 ["git", "push"],
-                cwd=repo_path,
-                capture_output=True,
-                timeout=30,
+                cwd=repo_path, capture_output=True, timeout=30, env=git_env,
             )
         except Exception as e:
             logger.warning(f"Git sync failed: {e}")

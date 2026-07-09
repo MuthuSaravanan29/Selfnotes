@@ -158,12 +158,13 @@ export async function getGitConfig() {
   }
 }
 
-export async function setGitConfig(remoteUrl, authType, token) {
+export async function setGitConfig(remoteUrl, authType, token, sshKey) {
   try {
     const response = await api.post("api/git-config", {
       remote_url: remoteUrl,
       auth_type: authType,
       token: token || "",
+      ssh_key: sshKey || "",
     });
     return response.data;
   } catch (response) {

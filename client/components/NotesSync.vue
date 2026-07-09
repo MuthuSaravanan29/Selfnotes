@@ -66,13 +66,18 @@
         <!-- SSH Auth -->
         <div v-if="authType === 'ssh'">
           <div class="mb-3 rounded-lg border border-theme-border bg-theme-background-elevated p-3 text-sm text-theme-text-muted">
-            <p class="mb-2 font-semibold text-theme-text">Steps to add your SSH key:</p>
+            <p class="mb-2 font-semibold text-theme-text">SSH Private Key</p>
+            <p class="mb-2">Paste your <strong>private</strong> key below (e.g. contents of <code class="rounded bg-theme-background px-1">~/.ssh/id_ed25519</code>):</p>
+            <textarea
+              v-model="sshKey"
+              rows="6"
+              placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
+              class="mb-3 w-full rounded border border-theme-border bg-theme-background-elevated px-3 py-2 text-sm text-theme-text outline-none focus:border-theme-brand font-mono"
+            ></textarea>
+            <p class="mb-2 font-semibold text-theme-text">Steps to add your public key to GitHub:</p>
             <ol class="list-inside list-decimal space-y-1">
-              <li>Run: <code class="rounded bg-theme-background px-1">ssh-keygen -t ed25519 -C "your_email@example.com"</code></li>
-              <li>Run: <code class="rounded bg-theme-background px-1">cat ~/.ssh/id_ed25519.pub</code></li>
-              <li>Copy the output</li>
               <li>Go to GitHub → Settings → SSH and GPG keys → New SSH key</li>
-              <li>Paste your key and save</li>
+              <li>Paste your <strong>public</strong> key (<code class="rounded bg-theme-background px-1">cat ~/.ssh/id_ed25519.pub</code>) and save</li>
             </ol>
           </div>
         </div>
@@ -172,13 +177,14 @@ const step = ref(1);
 const remoteUrl = ref("");
 const authType = ref("token");
 const token = ref("");
+const sshKey = ref("");
 const verifying = ref(false);
 const verifyResult = ref(null);
 const verifyMessage = ref("");
 
 async function saveAndVerify() {
   try {
-    await setGitConfig(remoteUrl.value.trim(), authType.value, token.value.trim());
+    await setGitConfig(remoteUrl.value.trim(), authType.value, token.value.trim(), sshKey.value.trim());
   } catch (error) {
     toast.add(getToastOptions("Failed to save configuration.", "Error", "error"));
     return;
@@ -211,6 +217,7 @@ function close() {
   remoteUrl.value = "";
   authType.value = "token";
   token.value = "";
+  sshKey.value = "";
   verifying.value = false;
   verifyResult.value = null;
   verifyMessage.value = "";
