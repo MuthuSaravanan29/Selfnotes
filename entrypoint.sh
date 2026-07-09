@@ -2,26 +2,29 @@
 
 [ "$EXEC_TOOL" ] || EXEC_TOOL=gosu
 [ "$FLATNOTES_HOST" ] || FLATNOTES_HOST=0.0.0.0
-[ "$FLATNOTES_PORT" ] || FLATNOTES_PORT=8080
+[ "$FLATNOTES_PORT" ] || FLATNOTES_PORT=2908
+[ "$FLATNOTES_AUTH_TYPE" ] || FLATNOTES_AUTH_TYPE=password
+[ "$FLATNOTES_USERNAME" ] || FLATNOTES_USERNAME=admin
+[ "$FLATNOTES_PASSWORD" ] || FLATNOTES_PASSWORD=slingshot123
+[ "$FLATNOTES_SECRET_KEY" ] || FLATNOTES_SECRET_KEY=slingshot-dev-secret-key-change-me
+
+export FLATNOTES_AUTH_TYPE
+export FLATNOTES_USERNAME
+export FLATNOTES_PASSWORD
+export FLATNOTES_SECRET_KEY
 
 set -e
 
 echo "\
 ======================================
-======== Welcome to flatnotes ========
+======== Welcome to Slingshot ========
 ======================================
-
-If you enjoy using flatnotes, please
-consider sponsoring the project at:
-
-https://sponsor.flatnotes.io
-
-It would really make my day 🙏.
-
+Login: ${FLATNOTES_USERNAME}
+Password: ${FLATNOTES_PASSWORD}
 ──────────────────────────────────────
 "
 
-flatnotes_command="python -m \
+slingshot_command="python -m \
                   uvicorn \
                   main:app \
                   --app-dir server \
@@ -33,12 +36,10 @@ flatnotes_command="python -m \
 if [ `id -u` -eq 0 ] && [ `id -g` -eq 0 ]; then
     echo Setting file permissions...
     chown -R ${PUID}:${PGID} ${FLATNOTES_PATH}
-
-    echo Starting flatnotes as user ${PUID}...
-    exec ${EXEC_TOOL} ${PUID}:${PGID} ${flatnotes_command}
-
+    echo Starting Slingshot as user ${PUID}...
+    exec ${EXEC_TOOL} ${PUID}:${PGID} ${slingshot_command}
 else
     echo "A user was set by docker, skipping file permission changes."
-    echo Starting flatnotes as user $(id -u)...
-    exec ${flatnotes_command}
+    echo Starting Slingshot as user $(id -u)...
+    exec ${slingshot_command}
 fi

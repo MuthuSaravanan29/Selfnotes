@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from datetime import datetime
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile
@@ -297,7 +298,7 @@ def verify_git_sync():
         # Create a test file
         test_file = os.path.join(storage_path, ".slingshot-sync-test.md")
         with open(test_file, "w") as f:
-            f.write(f"# Slingshot Sync Test\n\nVerified at: {__import__('datetime').datetime.now()}\n")
+            f.write(f"# Slingshot Sync Test\n\nVerified at: {datetime.now()}\n")
 
         subprocess.run(["git", "add", "-A"], cwd=repo_root, capture_output=True, timeout=10)
         result = subprocess.run(
